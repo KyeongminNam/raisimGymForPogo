@@ -149,6 +149,8 @@ for update in range(iteration_number, 100001):
                 reward, dones = env.step_visualize(actions)
                 data_size = env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
                 by_terminate(dones)
+            torch.cuda.empty_cache()
+
 
         data_std = np.sqrt((data_square_sum - data_size * data_mean * data_mean) / (data_size - 1 + 1e-16))
 
@@ -172,21 +174,23 @@ for update in range(iteration_number, 100001):
             done_sum = done_sum + np.sum(dones)
             reward_ll_sum = reward_ll_sum + np.sum(reward)
             by_terminate(dones)
+        torch.cuda.empty_cache()
+
 
     # take st step to get value obs
     value_obs = env.get_value_obs(update < 10000)
     ppo.update(value_obs=np.expand_dims(value_obs, axis=0),
                log_this_iteration=update % cfg['environment']['iteration_per_log'] == 0, update=update)
+    torch.cuda.empty_cache()
     average_ll_performance = reward_ll_sum / total_steps
     average_dones = done_sum / total_steps
-    actor.distribution.enforce_minimum_std((torch.ones(6) * (4.0*math.exp(-0.0002 * update) + 0.25)).to(device))
-    #actor.distribution.enforce_maximum_std((torch.ones(6) * 10.0).to(device))
+    actor.distribution.enforce_minimum_std((torch.ones(3) * (4.0*math.exp(-0.0002 * update) + 0.25)).to(device))
     actor.update()
 
     if update % cfg['environment']['curriculum']['iteration_per_update'] == 0:
         env.curriculum_callback()
-    if update % cfg['environment']['curriculum']['terrain_change'] == 0:
-        env.terrain_callback()
+    # if update % cfg['environment']['curriculum']['terrain_change'] == 0:
+    #     env.terrain_callback()
 
     if update % cfg['environment']['iteration_per_log'] == 0:
         ppo.writer.add_scalar('Training/average_reward', average_ll_performance, global_step=update)

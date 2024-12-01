@@ -12,5 +12,5 @@ cmake-*/*
 *imgui.ini
 .vscode/*
 id_rsa
-raisimGymForSegway/env/bin/
-/raisimGymForSegway/data/
+/raisimGymForPogo/data/
+/raisimGymForPogo/env/bin/

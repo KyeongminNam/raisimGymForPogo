@@ -45,7 +45,6 @@ namespace raisim {
             /// get robot data
             gcDim_ = pogo_->getGeneralizedCoordinateDim();
             gvDim_ = pogo_->getDOF();
-            nJoints_ = controller_.nJoints_;
 
             /// initialize containers
             gc_init_.setZero(gcDim_);
@@ -66,6 +65,8 @@ namespace raisim {
 
             if(visualizable_){
                 server_ = std::make_unique<raisim::RaisimServer>(&world_);
+                server_->launchServer();
+                server_->focusOn(pogo_);
             }
 
         }
@@ -167,14 +168,7 @@ namespace raisim {
         }
 
         bool isTerminalState(float& terminalReward) {
-            terminalReward = -10.0;
-            for(auto& contact: pogo_->getContacts()){
-                if(contact.getPairObjectIndex() == world_.getObject("ground")->getIndexInWorld() && contact.getlocalBodyIndex() == pogo_->getBodyIdx("mass")){
-                    return true;
-                }
-            }
-            terminalReward = 0.0;
-            return false;
+            return controller_.isTerminalState(terminalReward);
         }
 
         void setSeed(int seed) {
@@ -200,7 +194,7 @@ namespace raisim {
         }
 
     protected:
-        int nJoints_ = 0;
+        static constexpr int nJoints_ = 3;
         raisim::World world_;
         double simulation_dt_;
         double control_dt_;

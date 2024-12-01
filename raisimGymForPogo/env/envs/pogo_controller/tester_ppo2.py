@@ -1,8 +1,8 @@
 import numpy as np
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymForSegway.env.bin.raiway_controller import RaisimGymForSegway
-from raisimGymForSegway.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
-import raisimGymForSegway.algo.ppo2.module as ppo_module
+from raisimGymForPogo.env.bin.pogo_controller import RaisimGymForSegway
+from raisimGymForPogo.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
+import raisimGymForPogo.algo.ppo2.module as ppo_module
 import os
 import math
 import torch
@@ -74,7 +74,7 @@ else:
     start_step_id = 0
 
     print("Visualizing and evaluating the policy: ", weight_path)
-    loaded_graph = ppo_module.GRU_MLP_Actor(ob_dim - 2,
+    loaded_graph = ppo_module.GRU_MLP_Actor(ob_dim - 3,
                                             cfg['architecture']['hidden_dim'],
                                             cfg['architecture']['mlp_shape'],
                                             act_dim,

@@ -13,9 +13,8 @@ namespace raisim {
             pogo_ = reinterpret_cast<raisim::ArticulatedSystem *>(world->getObject("pogo"));
             gcDim_ = pogo_->getGeneralizedCoordinateDim();
             gvDim_ = pogo_->getDOF();
-            nJoints_ = gvDim_ - 7;
-            gc_.resize(gcDim_);
-            gv_.resize(gvDim_);
+            gc_.setZero(gcDim_);
+            gv_.setZero(gvDim_);
 
             /// action
             actionMean_.setZero(actionDim_);
@@ -34,9 +33,9 @@ namespace raisim {
             pTarget_.setZero(gcDim_); vTarget_.setZero(gvDim_);
 
             jointPgain_.tail(nJoints_).setConstant(pGainRev_);
-            jointPgain_[POGO_GC_PRISMATIC_IDX] = pGainPrsm_;
-            jointPgain_[POGO_GC_PASSIVE_IDX] = pogoSpringConstant_;
-            pTarget_[POGO_GC_PASSIVE_IDX] = -(pogoPreload_ / pogoSpringConstant_);
+            jointPgain_[6 + POGO_GC_PRISMATIC_IDX] = pGainPrsm_;
+            jointPgain_[6 + POGO_GC_PASSIVE_IDX] = pogoSpringConstant_;
+            pTarget_[7 + POGO_GC_PASSIVE_IDX] = -(pogoPreload_ / pogoSpringConstant_);
             jointDgain_.tail(nJoints_).setConstant(0.2);
 
             pogo_->setPdGains(jointPgain_, jointDgain_);
@@ -131,7 +130,7 @@ namespace raisim {
             stepData_[10] = 0.0;
             stepData_ /= howManySteps;
             totalReward = stepData_.sum();
-            positiveReward = stepData_[0] + stepData_[5];
+            positiveReward = stepData_[0] + stepData_[5] + stepData_[8];
             negativeReward = totalReward - positiveReward;
             stepData_[9] = positiveReward;
             stepData_[10] = negativeReward;
@@ -147,6 +146,20 @@ namespace raisim {
             baseheightReward_ = 0.;
 
             return float(positiveReward * std::exp(0.2 * negativeReward));
+        }
+        [[nodiscard]] bool isTerminalState(float &terminalReward) {
+            terminalReward = float(terminalReward_);
+
+            /// if the contact body is not feet
+            for (auto &contact: pogo_->getContacts()) {
+                    if(contact.getlocalBodyIndex() == pogo_->getBodyIdx("mass")){
+                        return true;
+                    }
+
+            }
+
+            terminalReward = float(0.0);
+            return false;
         }
 
 
@@ -262,7 +275,7 @@ namespace raisim {
 
         // robot configuration variables
         raisim::ArticulatedSystem *pogo_;
-        int nJoints_ = 0;
+        static constexpr int nJoints_ = 3;
         static constexpr int actionDim_ = 3;
         static constexpr size_t obDim_ = 18;
         static constexpr size_t valueObDim_ = 22;
@@ -282,8 +295,8 @@ namespace raisim {
         double baseHeight_ = 0.0;
 
         // pogo variables
-        static constexpr size_t POGO_GC_PASSIVE_IDX = 6; // the gc index of the "passive" joint (needs pd gain set to spring const.)
-        static constexpr size_t POGO_GC_PRISMATIC_IDX = 9; // the gc index of the "active" prismatic joint (needs different pd gain)
+        static constexpr size_t POGO_GC_PASSIVE_IDX = 0; // the gc index of the "passive" joint (needs pd gain set to spring const.)
+        static constexpr size_t POGO_GC_PRISMATIC_IDX = 3; // the gc index of the "active" prismatic joint (needs different pd gain)
         static constexpr double pGainRev_ = 50.0;
         static constexpr double pGainPrsm_ = 5000.0;
         static constexpr double pogoSpringConstant_ = 15000.0;
@@ -314,6 +327,7 @@ namespace raisim {
         double orientationRewardCoeff_ = 0., orientationReward_ = 0.;
         double basemotionRewardCoeff_ = 0., basemotionReward_ = 0.;
         double baseheightRewardCoeff_ = 0., baseheightReward_ = 0.;
+        double terminalReward_ = -100.0;
 
         // exported data
         Eigen::VectorXd stepData_;

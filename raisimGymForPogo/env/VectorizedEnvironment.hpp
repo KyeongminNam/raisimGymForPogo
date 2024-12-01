@@ -269,10 +269,9 @@ class VectorizedEnvironment {
 
     float terminalReward = 0;
     done[agentId] = environments_[agentId]->isTerminalState(terminalReward);
-
     if (done[agentId]) {
-      environments_[agentId]->reset();
-      reward[agentId] += terminalReward;
+        reward[agentId] += terminalReward;
+        environments_[agentId]->reset();
     }
   }
 
