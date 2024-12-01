@@ -104,14 +104,15 @@ namespace raisim {
                 command_.setZero(3);
             } else {
                 do {
-                    command_ << ((maxSpeed_+1.) * uniDist_(gen_) - 1.0) * cmdcurriculumFactor_, /// ~ U(-1.0, maxSpeed)
-                            ((maxSpeed_+1.) * uniDist_(gen_) - 1.0) * cmdcurriculumFactor_, /// ~ U(-1.0, maxSpeed)
-                            (4.*uniDist_(gen_) - 2.0) * cmdcurriculumFactor_; /// ~ U(-2.0, 2.0)
+                    command_ << (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_, /// ~ U(-maxSpeed, maxSpeed)
+                            (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_, /// ~ U(-maxSpeed, maxSpeed)
+                            (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_; /// ~ U(-maxSpeed, maxSpeed)
 
                     double p = uniDist_(gen_);
-                    if (p < 1. / 6.) command_ << command_(0), 0., 0.;
-                    else if (p < 2. / 6.) command_ << 0., command_(1), 0.0;
-                    else if (p < 3. / 6.) command_ << 0., 0., command_(2);
+                    if (p < 1. / 8.) command_ << command_(0), 0., 0.;
+                    else if (p < 2. / 8.) command_ << 0., command_(1), 0.0;
+                    else if (p < 3. / 8.) command_ << command_(0), command_(1), 0.0;
+                    else if (p < 4. / 8.) command_ << 0., 0., command_(2);
                 } while (command_.norm() < 0.3);
             }
             pogo_->setGeneralizedCoordinate(gc_init_);

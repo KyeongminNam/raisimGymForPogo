@@ -54,6 +54,7 @@ namespace raisim {
                             "con_rew",
                             "base_motion_rew",
                             "base_height_rew",
+                            "z_vel_rew",
                             "positive_rew",
                             "negative_rew"};
             stepData_.resize(stepDataTag_.size());
@@ -126,14 +127,15 @@ namespace raisim {
             stepData_[6] = conReward_;
             stepData_[7] = basemotionReward_;
             stepData_[8] = baseheightReward_;
-            stepData_[9] = 0.0;
+            stepData_[9] = zvelReward_;
             stepData_[10] = 0.0;
+            stepData_[11] = 0.0;
             stepData_ /= howManySteps;
             totalReward = stepData_.sum();
-            positiveReward = stepData_[0] + stepData_[5] + stepData_[8];
+            positiveReward = stepData_[0] + stepData_[5] + stepData_[8]+ stepData_[9];
             negativeReward = totalReward - positiveReward;
-            stepData_[9] = positiveReward;
-            stepData_[10] = negativeReward;
+            stepData_[10] = positiveReward;
+            stepData_[11] = negativeReward;
 
             commandTrackingReward_ = 0.;
             torqueReward_ = 0.;
@@ -144,6 +146,7 @@ namespace raisim {
             conReward_ = 0.;
             basemotionReward_ = 0.;
             baseheightReward_ = 0.;
+            zvelReward_ = 0.;
 
             return float(positiveReward * std::exp(0.2 * negativeReward));
         }
@@ -211,15 +214,16 @@ namespace raisim {
             READ_YAML(double, conRewardCoeff_, cfg["reward"]["con_reward_coeff"])
             READ_YAML(double, basemotionRewardCoeff_, cfg["reward"]["base_motion_reward_coeff"])
             READ_YAML(double, baseheightRewardCoeff_, cfg["reward"]["base_height_reward_coeff"])
+            READ_YAML(double, zvelRewardCoeff_, cfg["reward"]["z_vel_reward_coeff"])
         }
 
         inline void accumulateRewards(Eigen::Vector3d &command, double cf) {
             //commandTracking
             double linearCommandTrackingReward = 0., angularCommandTrackingReward = 0.;
-            linearCommandTrackingReward += std::exp(-1.0 * pow((command(0) - bodyLinVel_(0)), 2));
+            linearCommandTrackingReward += std::exp(-1.0 * (command.head(2) - bodyLinVel_.head(2)).squaredNorm());
             angularCommandTrackingReward += std::exp(-1.5 * pow((command(2) - bodyAngVel_(2)), 2));
-            if (command(0) > 1.5)
-                linearCommandTrackingReward *= std::min((1.0 + 0.5 * std::pow(command(0) - 1.5, 2)), 5.0);
+            if (command.head(2).norm() > 1.5)
+                linearCommandTrackingReward *= (1.0 + 0.5 * std::pow(command.head(2).norm() - 1.5, 2));
             commandTrackingReward_ += (linearCommandTrackingReward + angularCommandTrackingReward) * commandTrackingRewardCoeff_;
 
             //torqueReward
@@ -242,10 +246,13 @@ namespace raisim {
             jointVelocityReward_ = jointVelocityRewardCoeff_ * jointVelocity_.norm();
 
             // basemotionReward
-            basemotionReward_ = basemotionRewardCoeff_ * bodyAngVel_.head(2).squaredNorm();
+            basemotionReward_ = basemotionRewardCoeff_ * bodyAngVel_.head(2).norm();
 
             //baseheightReward
             baseheightReward_ = baseheightRewardCoeff_ * std::min(baseHeight_, 4.0);
+
+            //zvelReward
+            zvelReward_ = zvelRewardCoeff_ * std::max(0.0,std::min(gv_[2],10.0));
 
 
 //            if (standingMode_) {
@@ -327,6 +334,7 @@ namespace raisim {
         double orientationRewardCoeff_ = 0., orientationReward_ = 0.;
         double basemotionRewardCoeff_ = 0., basemotionReward_ = 0.;
         double baseheightRewardCoeff_ = 0., baseheightReward_ = 0.;
+        double zvelRewardCoeff_ = 0., zvelReward_ = 0.;
         double terminalReward_ = -100.0;
 
         // exported data
