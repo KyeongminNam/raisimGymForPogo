@@ -2,8 +2,8 @@
 // Created by jemin on 2/25/20.
 //
 
-#ifndef _RAISIM_GYM_segway_CONTROLLER_HPP
-#define _RAISIM_GYM_segway_CONTROLLER_HPP
+#ifndef _RAISIM_GYM_pogo_CONTROLLER_HPP
+#define _RAISIM_GYM_pogo_CONTROLLER_HPP
 
 namespace raisim {
 
@@ -43,6 +43,7 @@ namespace raisim {
 
             /// state data
             jointVelocity_.resize(nJoints_);
+            footIndex_.push_back(pogo_->getBodyIdx("tip"));
 
             /// exported data
             stepDataTag_ = {"command_tracking_rew",
@@ -54,6 +55,7 @@ namespace raisim {
                             "con_rew",
                             "base_motion_rew",
                             "base_height_rew",
+                            "base_height_limit_rew",
                             "z_vel_rew",
                             "positive_rew",
                             "negative_rew"};
@@ -67,21 +69,31 @@ namespace raisim {
             pogo_->getState(gc_, gv_);
             jointVelocity_ = gv_.tail(nJoints_);
             baseRot_ = pogo_->getBaseOrientation();
+            worldLinVel_ = gv_.segment(0, 3);
             bodyLinVel_ = baseRot_.e().transpose() * gv_.segment(0, 3);
             bodyAngVel_ = baseRot_.e().transpose() * gv_.segment(3, 3);
             baseHeight_ = gc_[2];
 
-
-            /// airtime & standtime
-            for (int i = 0; i < 2; i++) {
-                if (footContactState_[i]) {
-                    airTime_[i] = 0;
-                    stanceTime_[i] += simDt_;
-                } else {
-                    airTime_[i] += simDt_;
-                    stanceTime_[i] = 0;
+            /// check if the feet are in contact with the ground
+            footContactState_ = false;
+            for (auto &contact: pogo_->getContacts()) {
+                if (contact.skip()) continue;
+                auto it = std::find(footIndex_.begin(), footIndex_.end(), contact.getlocalBodyIndex());
+                size_t index = it - footIndex_.begin();
+                if (index < 1 && !contact.isSelfCollision()){
+                    footContactState_ = true;
                 }
             }
+
+            /// airtime & standtime
+            if (footContactState_) {
+                airTime_ = 0;
+                stanceTime_ += simDt_;
+            } else {
+                airTime_ += simDt_;
+                stanceTime_ = 0;
+            }
+
         }
 
         void getObservation(Eigen::VectorXd &observation) {
@@ -127,15 +139,16 @@ namespace raisim {
             stepData_[6] = conReward_;
             stepData_[7] = basemotionReward_;
             stepData_[8] = baseheightReward_;
-            stepData_[9] = zvelReward_;
-            stepData_[10] = 0.0;
+            stepData_[9] = baseheightLimitReward_;
+            stepData_[10] = zvelReward_;
             stepData_[11] = 0.0;
+            stepData_[12] = 0.0;
             stepData_ /= howManySteps;
             totalReward = stepData_.sum();
-            positiveReward = stepData_[0] + stepData_[5] + stepData_[8]+ stepData_[9];
+            positiveReward = stepData_[0] + stepData_[5] + stepData_[8]+ stepData_[10];
             negativeReward = totalReward - positiveReward;
-            stepData_[10] = positiveReward;
-            stepData_[11] = negativeReward;
+            stepData_[11] = positiveReward;
+            stepData_[12] = negativeReward;
 
             commandTrackingReward_ = 0.;
             torqueReward_ = 0.;
@@ -146,6 +159,7 @@ namespace raisim {
             conReward_ = 0.;
             basemotionReward_ = 0.;
             baseheightReward_ = 0.;
+            baseheightLimitReward_ = 0.;
             zvelReward_ = 0.;
 
             return float(positiveReward * std::exp(0.2 * negativeReward));
@@ -214,6 +228,7 @@ namespace raisim {
             READ_YAML(double, conRewardCoeff_, cfg["reward"]["con_reward_coeff"])
             READ_YAML(double, basemotionRewardCoeff_, cfg["reward"]["base_motion_reward_coeff"])
             READ_YAML(double, baseheightRewardCoeff_, cfg["reward"]["base_height_reward_coeff"])
+            READ_YAML(double, baseheightLimitRewardCoeff_, cfg["reward"]["base_height_limit_reward_coeff"])
             READ_YAML(double, zvelRewardCoeff_, cfg["reward"]["z_vel_reward_coeff"])
         }
 
@@ -230,29 +245,33 @@ namespace raisim {
             torqueReward_ += torqueRewardCoeff_ * (pogo_->getGeneralizedForce().e().tail(6).squaredNorm());
 
             //orientationReward
-            orientationReward_ = orientationRewardCoeff_ * baseRot_[8];
+            orientationReward_ += orientationRewardCoeff_ * baseRot_[8];
 
             //conReward
-            for (int i=0; i<2; i++)
-                if (!footContactState_[i]){
-                    conReward_ += conRewardCoeff_;
-                }
+            if (footContactState_){
+                conReward_ += conRewardCoeff_;
+            }
 
             //smooth reward
             smoothReward_ += smoothRewardCoeff_ * (prepreprevAction_ + previousAction_ - 2 * prevprevAction_).norm();
             smoothReward2_ += smoothReward2Coeff_ * (previousAction_ - prevprevAction_).norm();
 
             //jointVelocityReward
-            jointVelocityReward_ = jointVelocityRewardCoeff_ * jointVelocity_.norm();
+            jointVelocityReward_ += jointVelocityRewardCoeff_ * jointVelocity_.norm();
 
             // basemotionReward
-            basemotionReward_ = basemotionRewardCoeff_ * bodyAngVel_.head(2).norm();
+            basemotionReward_ += basemotionRewardCoeff_ * bodyAngVel_.head(2).norm();
 
             //baseheightReward
-            baseheightReward_ = baseheightRewardCoeff_ * std::min(baseHeight_, 4.0);
+            baseheightReward_ += baseheightRewardCoeff_ * std::min(baseHeight_, desiredbaseHeight_);
+
+            if(baseHeight_ > 2.0){
+                baseheightLimitReward_ += baseheightLimitRewardCoeff_ * pow(baseHeight_, 2);
+            }
+
 
             //zvelReward
-            zvelReward_ = zvelRewardCoeff_ * std::max(0.0,std::min(gv_[2],10.0));
+            zvelReward_ += zvelRewardCoeff_ * std::max(0.0,std::min(gv_[2],10.0));
 
 
 //            if (standingMode_) {
@@ -262,6 +281,19 @@ namespace raisim {
         }
 
         void getLoggingInfo(const Eigen::Vector3d &command, Eigen::Ref<EigenVec> info) {
+            Eigen::VectorXd infoBag;
+            infoBag.setZero(20);
+
+
+            infoBag << pogo_->getGeneralizedCoordinate().e().tail(nJoints_), // 0,1,2
+                    pogo_->getGeneralizedVelocity().e().tail(nJoints_), // 3,4,5
+                    pogo_->getGeneralizedForce().e().tail(nJoints_), // 6,7,8
+                    bodyLinVel_, // 9,10,11
+                    bodyAngVel_, // 12,13,14
+                    command, // 15,16,17
+                    airTime_, stanceTime_; //18,19
+
+            info = infoBag.cast<float>();
         }
 
 
@@ -282,6 +314,7 @@ namespace raisim {
 
         // robot configuration variables
         raisim::ArticulatedSystem *pogo_;
+        std::vector<size_t> footIndex_;
         static constexpr int nJoints_ = 3;
         static constexpr int actionDim_ = 3;
         static constexpr size_t obDim_ = 18;
@@ -292,14 +325,14 @@ namespace raisim {
 
         // robot state variables
         Eigen::VectorXd gc_, gv_;
-        Eigen::Vector3d bodyLinVel_, bodyAngVel_; /// body velocities are expressed in the body frame
+        Eigen::Vector3d bodyLinVel_, bodyAngVel_, worldLinVel_; /// body velocities are expressed in the body frame
         Eigen::VectorXd jointVelocity_;
         std::array<raisim::Vec<3>, 2> footPos_, relativeFootPos_, footVel_;
         raisim::Vec<3> zAxis_ = {0., 0., 1.}, controlFrameX_, controlFrameY_;
-        std::array<bool, 2> footContactState_;
+        bool footContactState_ = false;
         raisim::Mat<3, 3> baseRot_, controlRot_;
-        Eigen::Vector2d airTime_, stanceTime_;
-        double baseHeight_ = 0.0;
+        double airTime_, stanceTime_;
+        double baseHeight_ = 0.0, desiredbaseHeight_ = 1.25;
 
         // pogo variables
         static constexpr size_t POGO_GC_PASSIVE_IDX = 0; // the gc index of the "passive" joint (needs pd gain set to spring const.)
@@ -334,6 +367,7 @@ namespace raisim {
         double orientationRewardCoeff_ = 0., orientationReward_ = 0.;
         double basemotionRewardCoeff_ = 0., basemotionReward_ = 0.;
         double baseheightRewardCoeff_ = 0., baseheightReward_ = 0.;
+        double baseheightLimitRewardCoeff_ = 0., baseheightLimitReward_ = 0.;
         double zvelRewardCoeff_ = 0., zvelReward_ = 0.;
         double terminalReward_ = -100.0;
 
@@ -344,4 +378,4 @@ namespace raisim {
 
 }
 
-#endif //_RAISIM_GYM_segway_CONTROLLER_HPP
+#endif //_RAISIM_GYM_pogo_CONTROLLER_HPP

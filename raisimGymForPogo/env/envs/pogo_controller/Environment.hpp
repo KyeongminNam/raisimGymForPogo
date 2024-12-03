@@ -66,7 +66,7 @@ namespace raisim {
             if(visualizable_){
                 server_ = std::make_unique<raisim::RaisimServer>(&world_);
                 server_->launchServer();
-                server_->focusOn(pogo_);
+
             }
 
         }
@@ -213,7 +213,7 @@ namespace raisim {
         bool visualizable_ = false;
         RandomHeightMapGenerator terrainGenerator_;
         RaiboController controller_;
-        double maxSpeed_ = 3.0;
+        double maxSpeed_ = 2.0;
 
         std::unique_ptr<raisim::RaisimServer> server_;
 

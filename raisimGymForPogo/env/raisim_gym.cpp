@@ -15,7 +15,7 @@ using namespace raisim;
 int THREAD_COUNT = 1;
 
 PYBIND11_MODULE(RAISIMGYM_TORCH_ENV_NAME, m) {
-  py::class_<VectorizedEnvironment<ENVIRONMENT>>(m, "RaisimGymForSegway")
+  py::class_<VectorizedEnvironment<ENVIRONMENT>>(m, "RaisimGymForPogo")
     .def(py::init<std::string, std::string>())
     .def("init", &VectorizedEnvironment<ENVIRONMENT>::init)
     .def("reset", &VectorizedEnvironment<ENVIRONMENT>::reset)

@@ -2,7 +2,7 @@
 task_name = "pogo_train1"
 
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymForPogo.env.bin.pogo_controller import RaisimGymForSegway
+from raisimGymForPogo.env.bin.pogo_controller import RaisimGymForPogo
 from raisimGymForPogo.env.bin.pogo_controller import NormalSampler
 from raisimGymForPogo.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 from raisimGymForPogo.helper.raisim_gym_helper import ConfigurationSaver, load_param, tensorboard_launcher
@@ -41,7 +41,7 @@ for key, value in reward_list.items():
     reward_coeff.append(value)
 
 # create environment from the configuration file
-env = VecEnv(RaisimGymForSegway(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
+env = VecEnv(RaisimGymForPogo(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
 
 # shortcuts
 ob_dim = env.num_obs
