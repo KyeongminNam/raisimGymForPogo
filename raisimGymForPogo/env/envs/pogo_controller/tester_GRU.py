@@ -51,7 +51,7 @@ command = np.zeros(3, dtype=np.float32)
 
 gc = np.zeros(13, dtype=np.float32)
 gv = np.zeros(12, dtype=np.float32)
-info = np.zeros(20, dtype=np.float32)
+info = np.zeros(23, dtype=np.float32)
 
 # plotting
 infoBag = []

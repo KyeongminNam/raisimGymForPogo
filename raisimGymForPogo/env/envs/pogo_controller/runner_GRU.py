@@ -1,5 +1,5 @@
 # task specification
-task_name = "pogo_train1"
+task_name = "pogo_GRUMLP"
 
 from ruamel.yaml import YAML, dump, RoundTripDumper
 from raisimGymForPogo.env.bin.pogo_controller import RaisimGymForPogo
@@ -69,7 +69,7 @@ critic = ppo_module.Critic(ppo_module.MLP(cfg['architecture']['mlp3_shape'], nn.
 
 saver = ConfigurationSaver(log_dir=home_path + "/raisimGymForPogo/data/" + task_name,
                            save_items=[task_path + "/cfg.yaml", task_path + "/Environment.hpp", task_path + "/PogoController.hpp",
-                                       task_path + "/RandomHeightMapGenerator.hpp", task_path + "/runner2.py",
+                                       task_path + "/RandomHeightMapGenerator.hpp", task_path + "/runner_GRU.py",
                                        task_path + "/../../RaisimGymVecEnv.py", task_path + "/../../VectorizedEnvironment.hpp", task_path + "/../../debug_app.cpp"])
 
 tensorboard_launcher(saver.data_dir + "/..")  # press refresh (F5) after the first ppo update

@@ -22,6 +22,7 @@ class Actor:
 
     def evaluate(self, obs, actions):
         self.action_mean = self.architecture.architecture(obs)
+        self.action_mean = self.action_mean.view(-1, *self.action_shape)
         return self.distribution.evaluate(self.action_mean, actions)
 
     def parameters(self):
@@ -60,7 +61,7 @@ class Critic:
         return self.architecture.architecture(obs).detach()
 
     def evaluate(self, obs):
-        return self.architecture.architecture(obs)
+        return self.architecture.architecture(obs).view(-1, 1)
 
     def parameters(self):
         return [*self.architecture.parameters()]
