@@ -59,8 +59,10 @@ namespace raisim {
                             "base_height_rew",
                             "base_height_limit_rew",
                             "z_vel_rew",
+                            "orientation_rew2",
                             "positive_rew",
-                            "negative_rew"};
+                            "negative_rew",
+                            "curriculum"};
             stepData_.resize(stepDataTag_.size());
 
             return true;
@@ -71,9 +73,12 @@ namespace raisim {
             pogo_->getState(gc_, gv_);
             jointVelocity_ = gv_.tail(nJoints_);
             baseRot_ = pogo_->getBaseOrientation();
-            worldLinVel_ = gv_.segment(0, 3);
+            pogo_->getBodyOrientation(pogo_->getBodyIdx("mass"), baseRot2_);
+
             bodyLinVel_ = baseRot_.e().transpose() * gv_.segment(0, 3);
+            bodyLinVel2_ = baseRot2_.e().transpose() * gv_.segment(0, 3);
             bodyAngVel_ = baseRot_.e().transpose() * gv_.segment(3, 3);
+            bodyAngVel2_ = baseRot2_.e().transpose() * gv_.segment(3, 3);
             baseHeight_ = gc_[2];
 
             /// check if the feet are in contact with the ground
@@ -130,7 +135,7 @@ namespace raisim {
             prepreprevAction_ << gc_.tail(nJoints_);
         }
 
-        [[nodiscard]] float getRewardSum(const int & howManySteps) {
+        [[nodiscard]] float getRewardSum(const int & howManySteps, double cf) {
             double positiveReward, negativeReward, totalReward;
             stepData_[0] = commandTrackingReward_;
             stepData_[1] = torqueReward_;
@@ -143,14 +148,17 @@ namespace raisim {
             stepData_[8] = baseheightReward_;
             stepData_[9] = baseheightLimitReward_;
             stepData_[10] = zvelReward_;
-            stepData_[11] = 0.0;
+            stepData_[11] = orientationReward2_;
             stepData_[12] = 0.0;
+            stepData_[13] = 0.0;
+            stepData_[14] = 0.0;
             stepData_ /= howManySteps;
             totalReward = stepData_.sum();
-            positiveReward = stepData_[0] + stepData_[5] + stepData_[8]+ stepData_[10];
+            positiveReward = stepData_[0] + stepData_[5] + stepData_[8]+ stepData_[10]+ stepData_[11];
             negativeReward = totalReward - positiveReward;
-            stepData_[11] = positiveReward;
-            stepData_[12] = negativeReward;
+            stepData_[12] = positiveReward;
+            stepData_[13] = negativeReward;
+            stepData_[14] = cf;
 
             commandTrackingReward_ = 0.;
             torqueReward_ = 0.;
@@ -163,6 +171,7 @@ namespace raisim {
             baseheightReward_ = 0.;
             baseheightLimitReward_ = 0.;
             zvelReward_ = 0.;
+            orientationReward2_ = 0.;
 
             return float(positiveReward * std::exp(0.2 * negativeReward));
         }
@@ -185,39 +194,47 @@ namespace raisim {
         void updateObservation(const Eigen::Vector3d &command) {
             obDouble_.setZero(obDim_);
 
-            /// body orientation - 3
+            /// body orientation - 3 + 3
             obDouble_.segment(0, 3) = baseRot_.e().row(2);
-            /// body ang vel - 3
-            obDouble_.segment(3, 3) = bodyAngVel_;
-            /// except the first joints, the joint history stores target-position - 3
-            obDouble_.segment(6, 3) << gc_.tail(nJoints_);
-            /// previous action - 6
-            obDouble_.segment(9 , 3) = previousAction_;
-            obDouble_.segment(12, 3) = prevprevAction_;
+            obDouble_.segment(3, 3) = baseRot2_.e().row(2);
+            /// body ang vel - 3 + 3
+            obDouble_.segment(6, 3) = bodyAngVel_;
+            obDouble_.segment(9, 3) = bodyAngVel2_;
+            /// gc, gv - 3 + 3
+            obDouble_.segment(12, 3) << gc_.tail(nJoints_);
+            obDouble_.segment(15, 3) << gv_.tail(nJoints_);
+            /// previous action - 3 + 3
+            obDouble_.segment(18 , 3) = previousAction_;
+            obDouble_.segment(21, 3) = prevprevAction_;
+
             /// command - 3
-            obDouble_.segment(15, 3) << command;
+            obDouble_.segment(24, 3) << command;
 
         }
 
         void updateValueObservation(const Eigen::Vector3d &command) {
             valueObDouble_.setZero(valueObDim_);
             /// body orientation - 3
+            /// body orientation - 3 + 3
             valueObDouble_.segment(0, 3) = baseRot_.e().row(2);
-            /// body ang vel - 3
-            valueObDouble_.segment(3, 3) = bodyAngVel_;
-            /// except the first joints, the joint history stores target-position - 3
-            valueObDouble_.segment(6, 3) << gc_.tail(nJoints_);
-            /// previous action - 6
-            valueObDouble_.segment(9 , 3) = previousAction_;
-            valueObDouble_.segment(12, 3) = prevprevAction_;
+            valueObDouble_.segment(3, 3) = baseRot2_.e().row(2);
+            /// body ang vel - 3 + 3
+            valueObDouble_.segment(6, 3) = bodyAngVel_;
+            valueObDouble_.segment(9, 3) = bodyAngVel2_;
+            /// gc, gv - 3 + 3
+            valueObDouble_.segment(12, 3) << gc_.tail(nJoints_);
+            valueObDouble_.segment(15, 3) << gv_.tail(nJoints_);
+            /// previous action - 3 + 3
+            valueObDouble_.segment(18 , 3) = previousAction_;
+            valueObDouble_.segment(21, 3) = prevprevAction_;
             /// command - 3
-            valueObDouble_.segment(15, 3) << command;
+            valueObDouble_.segment(24, 3) << command;
 
-            /// body lin vel - 3
-            valueObDouble_.segment(18, 3) = bodyLinVel_;
+            /// body lin vel - 3 + 3
+            valueObDouble_.segment(27, 3) = bodyLinVel_;
+            valueObDouble_.segment(30, 3) = bodyLinVel2_;
             /// height of the origin of the body frame - 1
-            valueObDouble_[21] = baseHeight_;
-
+            valueObDouble_[33] = baseHeight_;
         }
 
         inline void setRewardConfig(const Yaml::Node &cfg) {
@@ -232,13 +249,14 @@ namespace raisim {
             READ_YAML(double, baseheightRewardCoeff_, cfg["reward"]["base_height_reward_coeff"])
             READ_YAML(double, baseheightLimitRewardCoeff_, cfg["reward"]["base_height_limit_reward_coeff"])
             READ_YAML(double, zvelRewardCoeff_, cfg["reward"]["z_vel_reward_coeff"])
+            READ_YAML(double, orientationReward2Coeff_, cfg["reward"]["orientation_reward2_coeff"])
         }
 
         inline void accumulateRewards(Eigen::Vector3d &command, double cf) {
             //commandTracking
             double linearCommandTrackingReward = 0., angularCommandTrackingReward = 0.;
-            linearCommandTrackingReward += std::exp(-1.0 * (command.head(2) - bodyLinVel_.head(2)).squaredNorm());
-            angularCommandTrackingReward += std::exp(-1.5 * pow((command(2) - bodyAngVel_(2)), 2));
+            linearCommandTrackingReward += std::exp(-1.0 * (command.head(2) - bodyLinVel2_.head(2)).squaredNorm());
+            angularCommandTrackingReward += std::exp(-1.5 * pow((command(2) - bodyAngVel2_(2)), 2));
             if (command.head(2).norm() > 1.5)
                 linearCommandTrackingReward *= (1.0 + 0.5 * std::pow(command.head(2).norm() - 1.5, 2));
             commandTrackingReward_ += (linearCommandTrackingReward + angularCommandTrackingReward) * commandTrackingRewardCoeff_;
@@ -248,6 +266,7 @@ namespace raisim {
 
             //orientationReward
             orientationReward_ += orientationRewardCoeff_ * std::pow(baseRot_[8]+1,2);
+            orientationReward2_ += orientationReward2Coeff_ * std::pow(baseRot2_[8]+1,2);
 
             //conReward
             if (footContactState_){
@@ -273,7 +292,7 @@ namespace raisim {
 
 
             //zvelReward
-            zvelReward_ += zvelRewardCoeff_ * std::clamp(gv_[2], 0.0, 1.5);
+            zvelReward_ += zvelRewardCoeff_ * std::clamp(gv_[2], 0.0, 3.0);
 
 
 //            if (standingMode_) {
@@ -299,43 +318,74 @@ namespace raisim {
             info = infoBag.cast<float>();
         }
 
+        Eigen::Vector3d getArrowPosition(){
+            return gc_.head(3);
+        }
+
+        Eigen::Vector4d getCommandArrowOrientation(Eigen::Vector3d &command){
+            double a = command[0];
+            double b = command[1];
+            double theta = std::atan2(b, a);
+
+            Eigen::Vector4d quat;
+            quat[0] = std::cos(theta / 2);
+            quat[1] = 0.0;
+            quat[2] = 0.0;
+            quat[3] = std::sin(theta / 2);
+            return quat;
+        }
+
+        Eigen::Vector4d getgvArrowOrientation(){
+            double a = bodyLinVel_[0];
+            double b = bodyLinVel_[1];
+            double theta = std::atan2(b, a);
+
+            Eigen::Vector4d quat;
+            quat[0] = std::cos(theta / 2);
+            quat[1] = 0.0;
+            quat[2] = 0.0;
+            quat[3] = std::sin(theta / 2);
+            return quat;
+        }
+
 
         inline void setStandingMode(bool mode) { standingMode_ = mode; }
 
         [[nodiscard]] static constexpr int getObDim() { return obDim_; }
         [[nodiscard]] static constexpr int getValueObDim() { return valueObDim_; }
         [[nodiscard]] static constexpr int getActionDim() { return actionDim_; }
-        [[nodiscard]] double getSimDt() { return simDt_; }
-        [[nodiscard]] double getConDt() { return conDt_; }
+        [[nodiscard]] static constexpr double getSimDt() { return simDt_; }
+        [[nodiscard]] static constexpr double getConDt() { return conDt_; }
         void getState(Eigen::Ref<EigenVec> gc, Eigen::Ref<EigenVec> gv) { gc = gc_.cast<float>(); gv = gv_.cast<float>(); }
 
-        void setSimDt(double dt) { simDt_ = dt; };
-        void setConDt(double dt) { conDt_ = dt; };
+        void setSimDt(double dt) {};
+        void setConDt(double dt) {};
 
         [[nodiscard]] inline const std::vector<std::string> &getStepDataTag() const { return stepDataTag_; }
         [[nodiscard]] inline const Eigen::VectorXd &getStepData() const { return stepData_; }
 
         // robot configuration variables
         raisim::ArticulatedSystem *pogo_;
-        std::vector<size_t> footIndex_;
+        std::vector<size_t> footIndex_, baseIndex_;
         static constexpr int nJoints_ = 3;
         static constexpr int actionDim_ = 3;
-        static constexpr size_t obDim_ = 18;
-        static constexpr size_t valueObDim_ = 22;
-        double simDt_ = .0025;
+        static constexpr size_t obDim_ = 27;
+        static constexpr size_t valueObDim_ = 34;
+        static constexpr double simDt_ = .0025;
+        static constexpr double conDt_ = .01;
         int gcDim_ = 0;
         int gvDim_ = 0;
 
         // robot state variables
         Eigen::VectorXd gc_, gv_;
-        Eigen::Vector3d bodyLinVel_, bodyAngVel_, worldLinVel_; /// body velocities are expressed in the body frame
+        Eigen::Vector3d bodyLinVel_, bodyLinVel2_, bodyAngVel_, bodyAngVel2_; /// body velocities are expressed in the body frame
         Eigen::VectorXd jointVelocity_;
         std::array<raisim::Vec<3>, 2> footPos_, relativeFootPos_, footVel_;
         raisim::Vec<3> zAxis_ = {0., 0., 1.}, controlFrameX_, controlFrameY_;
         bool footContactState_ = false;
-        raisim::Mat<3, 3> baseRot_, controlRot_;
+        raisim::Mat<3, 3> baseRot_, baseRot2_, controlRot_;
         double airTime_, stanceTime_;
-        double baseHeight_ = 0.0, desiredbaseHeight_ = 2.0;
+        double baseHeight_ = 0.0, desiredbaseHeight_ = 1.0;
 
         // pogo variables
         static constexpr size_t POGO_GC_PASSIVE_IDX = 0; // the gc index of the "passive" joint (needs pd gain set to spring const.)
@@ -352,7 +402,6 @@ namespace raisim {
         std::array<double, 2> contactNormalAngle_;
 
         // control variables
-        double conDt_ = 0.01;
         bool standingMode_ = false;
         Eigen::VectorXd actionMean_, actionStd_, actionScaled_, previousAction_, prevprevAction_, prepreprevAction_;
         Eigen::VectorXd actionDoulbe_;
@@ -368,6 +417,7 @@ namespace raisim {
         double conRewardCoeff_ = 0., conReward_ = 0.;
         double jointVelocityRewardCoeff_ = 0., jointVelocityReward_ = 0.;
         double orientationRewardCoeff_ = 0., orientationReward_ = 0.;
+        double orientationReward2Coeff_ = 0., orientationReward2_ = 0.;
         double basemotionRewardCoeff_ = 0., basemotionReward_ = 0.;
         double baseheightRewardCoeff_ = 0., baseheightReward_ = 0.;
         double baseheightLimitRewardCoeff_ = 0., baseheightLimitReward_ = 0.;

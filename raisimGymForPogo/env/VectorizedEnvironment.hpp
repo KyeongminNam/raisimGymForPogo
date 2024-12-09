@@ -137,6 +137,10 @@ class VectorizedEnvironment {
       environments_[0]->getLoggingInfo(info);
   }
 
+    void visualizeArrow() {
+        environments_[0]->visualizeArrow();
+    }
+
 
   void step(Eigen::Ref<EigenRowMajorMat> &action,
             Eigen::Ref<EigenVec> &reward,

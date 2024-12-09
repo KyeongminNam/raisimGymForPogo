@@ -65,6 +65,8 @@ namespace raisim {
 
             if(visualizable_){
                 server_ = std::make_unique<raisim::RaisimServer>(&world_);
+//                commandArrow_ = server_->addVisualArrow("command arrow", 0.2, 3.0, 1.0);
+//                gvArrow_ = server_->addVisualArrow("gv arrow", 0.2, 3.0, 0.0, 1.0);
                 server_->launchServer();
 
             }
@@ -106,7 +108,7 @@ namespace raisim {
                 do {
                     command_ << (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_, /// ~ U(-maxSpeed, maxSpeed)
                             (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_, /// ~ U(-maxSpeed, maxSpeed)
-                            (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_; /// ~ U(-maxSpeed, maxSpeed)
+                            ((2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_; /// ~ U(-maxSpeed, maxSpeed)
 
 
                     double p = uniDist_(gen_);
@@ -140,7 +142,7 @@ namespace raisim {
                     break;
                 }
             }
-            return controller_.getRewardSum(howManySteps);
+            return controller_.getRewardSum(howManySteps, cmdcurriculumFactor_);
         }
 
         void setCommand(const Eigen::Ref<EigenVec>& command) { command_ = command.cast<double>();}
@@ -179,7 +181,9 @@ namespace raisim {
         }
 
         void curriculumUpdate() {
-            cmdcurriculumFactor_ = std::pow(cmdcurriculumFactor_, cmdcurriculumDecayFactor_);
+//            cmdcurriculumFactor_ = std::pow(cmdcurriculumFactor_, cmdcurriculumDecayFactor_);
+            cmdcurriculumFactor_ += cmdcurriculumDecayFactor_;
+            cmdcurriculumFactor_ = std::min(cmdcurriculumFactor_, 1.0);
         }
 
         static constexpr int getObDim() { return RaiboController::getObDim(); }
@@ -193,6 +197,14 @@ namespace raisim {
 
         void getLoggingInfo(Eigen::Ref<EigenVec> info) {
             controller_.getLoggingInfo(command_, info);
+        }
+
+        void visualizeArrow(){
+//            commandArrow_->setPosition(controller_.getArrowPosition());
+//            commandArrow_->setOrientation(controller_.getCommandArrowOrientation(command_));
+//
+//            gvArrow_->setPosition(controller_.getArrowPosition());
+//            gvArrow_->setOrientation(controller_.getgvArrowOrientation());
         }
 
     protected:
@@ -214,9 +226,10 @@ namespace raisim {
         bool visualizable_ = false;
         RandomHeightMapGenerator terrainGenerator_;
         RaiboController controller_;
-        double maxSpeed_ = 2.0;
+        double maxSpeed_ = 3.0;
 
         std::unique_ptr<raisim::RaisimServer> server_;
+        raisim::Visuals *commandArrow_, *gvArrow_;
 
         thread_local static std::mt19937 gen_;
         thread_local static std::normal_distribution<double> normDist_;

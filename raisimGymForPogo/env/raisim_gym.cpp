@@ -43,6 +43,7 @@ PYBIND11_MODULE(RAISIMGYM_TORCH_ENV_NAME, m) {
     .def("setCommand", &VectorizedEnvironment<ENVIRONMENT>::setCommand)
     .def("getState", &VectorizedEnvironment<ENVIRONMENT>::getState)
     .def("getLoggingInfo", &VectorizedEnvironment<ENVIRONMENT>::getLoggingInfo)
+    .def("visualizeArrow", &VectorizedEnvironment<ENVIRONMENT>::visualizeArrow)
     .def("getObStatistics", &VectorizedEnvironment<ENVIRONMENT>::getObStatistics)
     .def("setObStatistics", &VectorizedEnvironment<ENVIRONMENT>::setObStatistics)
     .def("getValueObStatistics", &VectorizedEnvironment<ENVIRONMENT>::getValueObStatistics)

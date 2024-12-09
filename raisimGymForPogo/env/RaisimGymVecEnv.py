@@ -126,6 +126,9 @@ class RaisimGymVecEnv:
     def get_logging_info(self, info):
         self.wrapper.getLoggingInfo(info)
 
+    def visualizeArrow(self):
+        self.wrapper.visualizeArrow()
+
 
     @property
     def num_envs(self):

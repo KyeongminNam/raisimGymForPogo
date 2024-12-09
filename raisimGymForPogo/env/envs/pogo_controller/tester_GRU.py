@@ -42,7 +42,7 @@ ob_dim = env.num_obs
 act_dim = env.num_acts
 nMaps = env.num_ground
 ground = 0
-maxCommand = 1
+maxCommand = 2
 
 weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
@@ -109,6 +109,7 @@ else:
                 command[2] = -2 * joysticks[0].get_axis(3)
             print(command)
             env.set_command(command)
+            env.visualizeArrow()
             obs = env.observe(False)
             with torch.no_grad():
                 obs_tensor = torch.from_numpy(np.expand_dims(obs, axis=0)).to(device)

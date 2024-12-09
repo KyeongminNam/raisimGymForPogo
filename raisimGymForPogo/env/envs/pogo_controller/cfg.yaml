@@ -4,7 +4,7 @@ seed: 2
 environment:
   seed: 2
   render: True
-  num_envs: 400
+  num_envs: 100
   eval_every_n: 50
   iteration_per_save: 500
   iteration_per_record: 500
@@ -14,21 +14,22 @@ environment:
   max_time: 5.0
   iteration_per_log: 10
   reward:
-    command_tracking_reward: 5.0
-    torque_reward_coeff: -5e-8
+    command_tracking_reward: 10.0
+    torque_reward_coeff: -0.0
     joint_velocity_reward_coeff: -0.001
-    smooth_reward_coeff: -0.5
-    smooth_reward2_coeff: -1.0
-    orientation_reward_coeff: 5.0
+    smooth_reward_coeff: -0.2
+    smooth_reward2_coeff: -0.4
+    orientation_reward_coeff: 0.2
+    orientation_reward2_coeff: 1.0
     con_reward_coeff: -0.05
-    base_motion_reward_coeff: -0.1
-    base_height_reward_coeff: 2.5
+    base_motion_reward_coeff: -0.0
+    base_height_reward_coeff: 5.0
     base_height_limit_reward_coeff: -0.0
-    z_vel_reward_coeff: 1.5
+    z_vel_reward_coeff: 2.0
   curriculum:
     iteration_per_update: 20
-    cmd_initial_factor: 0.25
-    cmd_decay_factor: 0.97
+    cmd_initial_factor: 0.1
+    cmd_decay_factor: 0.05
 
 architecture:
   hidden_dim: 128
