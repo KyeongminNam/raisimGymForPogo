@@ -66,7 +66,7 @@ namespace raisim {
             if(visualizable_){
                 server_ = std::make_unique<raisim::RaisimServer>(&world_);
                 server_->launchServer();
-
+                server_->focusOn(pogo_);
             }
 
         }
@@ -95,7 +95,7 @@ namespace raisim {
             gc_init_.tail(nJoints_).setConstant(0.0);
 
 
-            const bool standingMode = std::abs(uniDist_(gen_)) < 0.2;  // 20 percent
+            const bool standingMode = std::abs(uniDist_(gen_)) < 0.1;  // 10 percent
             controller_.setStandingMode(standingMode);
 
             /// command sampling
@@ -108,13 +108,12 @@ namespace raisim {
                             (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_, /// ~ U(-maxSpeed, maxSpeed)
                             (maxSpeed_* (2*uniDist_(gen_) - 1.0)) * cmdcurriculumFactor_; /// ~ U(-maxSpeed, maxSpeed)
 
-
                     double p = uniDist_(gen_);
                     if (p < 1. / 8.) command_ << command_(0), 0., 0.;
                     else if (p < 2. / 8.) command_ << 0., command_(1), 0.0;
                     else if (p < 3. / 8.) command_ << command_(0), command_(1), 0.0;
                     else if (p < 4. / 8.) command_ << 0., 0., command_(2);
-                } while (command_.norm() < 0.5);
+                } while (command_.norm() < 0.3);
             }
             pogo_->setGeneralizedCoordinate(gc_init_);
 
@@ -214,7 +213,7 @@ namespace raisim {
         bool visualizable_ = false;
         RandomHeightMapGenerator terrainGenerator_;
         RaiboController controller_;
-        double maxSpeed_ = 2.0;
+        double maxSpeed_ = 3.0;
 
         std::unique_ptr<raisim::RaisimServer> server_;
 
