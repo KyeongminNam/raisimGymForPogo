@@ -256,10 +256,10 @@ namespace raisim {
             //commandTracking
             double linearCommandTrackingReward = 0., angularCommandTrackingReward = 0.;
             linearCommandTrackingReward += std::exp(-1.0 * (command.head(2) - bodyLinVel2_.head(2)).squaredNorm());
-            angularCommandTrackingReward += std::exp(-1.5 * pow((command(2) - bodyAngVel2_(2)), 2));
-            if (command.head(2).norm() > 1.5)
-                linearCommandTrackingReward *= (1.0 + 0.5 * std::pow(command.head(2).norm() - 1.5, 2));
-            commandTrackingReward_ += (linearCommandTrackingReward + angularCommandTrackingReward) * commandTrackingRewardCoeff_;
+            angularCommandTrackingReward += std::exp(-1.0 * pow((command(2) - bodyAngVel2_(2)), 2));
+//            if (command.head(2).norm() > 1.5)
+//                linearCommandTrackingReward *= (1.0 + 0.5 * std::pow(command.head(2).norm() - 1.5, 2));
+            commandTrackingReward_ += (1.5*linearCommandTrackingReward + 0.5*angularCommandTrackingReward) * commandTrackingRewardCoeff_;
 
             //torqueReward
             torqueReward_ += torqueRewardCoeff_ * (pogo_->getGeneralizedForce().e().tail(nJoints_).squaredNorm());
@@ -292,7 +292,7 @@ namespace raisim {
 
 
             //zvelReward
-            zvelReward_ += zvelRewardCoeff_ * std::clamp(gv_[2], 0.0, 3.0);
+            zvelReward_ += zvelRewardCoeff_ * std::clamp(gv_[2], 0.0, 2.0);
 
 
 //            if (standingMode_) {

@@ -82,9 +82,9 @@ ppo = PPO.PPO(actor=actor,
               gamma=0.99,
               lam=0.95,
               num_mini_batches=1,
-              policy_learning_rate=5e-4,
-              value_learning_rate=5e-4,
-              lr_scheduler_rate=0.9999079,
+              policy_learning_rate=3e-3,
+              value_learning_rate=3e-3,
+              lr_scheduler_rate=0.9997,
               max_grad_norm=0.5,
               device=device,
               log_dir=saver.data_dir,
@@ -115,7 +115,7 @@ if mode == 'retrain':
     for curriculum_update in range(int(iteration_number / cfg['environment']['curriculum']['iteration_per_update'])):
         env.curriculum_callback()
 
-for update in range(iteration_number, 100001):
+for update in range(iteration_number, 30001):
     start = time.time()
     reset()
     reward_ll_sum = 0
@@ -166,13 +166,15 @@ for update in range(iteration_number, 100001):
     # actual training
     data_tags = env.get_step_data_tag()
     data_mean = np.zeros(shape=(len(data_tags), 1), dtype=np.double)
+    data_size = 0
+
     for step in range(n_steps):
         with torch.no_grad():
             obs = env.observe(update < 10000)
             value_obs = env.get_value_obs(update < 10000)
             action = ppo.act(np.expand_dims(obs, axis=0))
             reward, dones = env.step(action)
-            env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
+            data_size = env.get_step_data(data_size, data_mean, data_square_sum, data_min, data_max)
             ppo.step(value_obs=value_obs, rews=reward, dones=dones)
             done_sum = done_sum + np.sum(dones)
             reward_ll_sum = reward_ll_sum + np.sum(reward)
@@ -187,18 +189,21 @@ for update in range(iteration_number, 100001):
     torch.cuda.empty_cache()
     average_ll_performance = reward_ll_sum / total_steps
     average_dones = done_sum / total_steps
-    actor.distribution.enforce_minimum_std((torch.ones(3) * (4.0*math.exp(-0.0002 * update) + 0.25)).to(device))
+    #actor.distribution.enforce_minimum_std((torch.ones(3) * (4.0*math.exp(-0.0002 * update) + 0.25)).to(device))
     actor.update()
 
     # if update % cfg['environment']['curriculum']['iteration_per_update'] == 0:
     #     env.curriculum_callback()
-    if data_mean[0] > 20.0:
+    achievement = float(data_mean[0] / 20.0)
+    if achievement > 0.75:
         env.curriculum_callback()
+
 
 
     if update % cfg['environment']['iteration_per_log'] == 0:
         ppo.writer.add_scalar('Training/average_reward', average_ll_performance, global_step=update)
         ppo.writer.add_scalar('Training/dones', average_dones, global_step=update)
+        ppo.writer.add_scalar('Training/command tracking curriculum', data_mean[14], global_step=update)
 
     end = time.time()
 
@@ -208,7 +213,9 @@ for update in range(iteration_number, 100001):
         print('{:<40} {:>6}'.format("average ll reward: ", '{:0.10f}'.format(average_ll_performance)))
         print('{:<40} {:>6}'.format("dones: ", '{:0.6f}'.format(average_dones)))
         print('{:<40} {:>6}'.format("time elapsed in this iteration: ", '{:6.4f}'.format(end - start)))
-        print('{:<40} {:>6}'.format("fps: ", '{:6.0f}'.format(total_steps / (end - start))))
-        print('{:<40} {:>6}'.format("real time factor: ", '{:6.0f}'.format(total_steps / (end - start)
-                                                                           * cfg['environment']['control_dt'])))
+        print('{:<40} {:>6}'.format("command tracking achievement: ", '{:0.6f}'.format(achievement)))
+        print('{:<40} {:>6}'.format("curriculum factor: ", '{:0.6f}'.format(float(data_mean[14]))))
+        # print('{:<40} {:>6}'.format("fps: ", '{:6.0f}'.format(total_steps / (end - start))))
+        # print('{:<40} {:>6}'.format("real time factor: ", '{:6.0f}'.format(total_steps / (end - start)
+        #                                                                    * cfg['environment']['control_dt'])))
         print('----------------------------------------------------\n')

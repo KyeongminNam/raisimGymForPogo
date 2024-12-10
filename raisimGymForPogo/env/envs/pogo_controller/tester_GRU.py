@@ -33,7 +33,7 @@ cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 # create environment from the configuration file
 cfg['environment']['num_envs'] = 1
 cfg['environment']['render'] = True
-cfg['environment']['curriculum']['initial_factor'] = 1
+cfg['environment']['curriculum']['cmd_initial_factor'] = 0.5
 
 env = VecEnv(RaisimGymForPogo(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
 
@@ -42,7 +42,7 @@ ob_dim = env.num_obs
 act_dim = env.num_acts
 nMaps = env.num_ground
 ground = 0
-maxCommand = 2
+maxCommand = 1.5
 
 weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
