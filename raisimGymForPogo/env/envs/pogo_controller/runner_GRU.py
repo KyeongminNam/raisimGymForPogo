@@ -1,5 +1,5 @@
 # task specification
-task_name = "pogo_GRUMLP"
+task_name = "pogo_GRUMLP_stand"
 
 from ruamel.yaml import YAML, dump, RoundTripDumper
 from raisimGymForPogo.env.bin.pogo_controller import RaisimGymForPogo
@@ -84,7 +84,7 @@ ppo = PPO.PPO(actor=actor,
               num_mini_batches=1,
               policy_learning_rate=3e-3,
               value_learning_rate=3e-3,
-              lr_scheduler_rate=0.9997,
+              lr_scheduler_rate=0.9996,
               max_grad_norm=0.5,
               device=device,
               log_dir=saver.data_dir,

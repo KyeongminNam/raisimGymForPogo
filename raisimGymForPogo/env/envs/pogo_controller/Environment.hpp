@@ -15,7 +15,6 @@
 #include "../../Yaml.hpp"
 #include "../../BasicEigenTypes.hpp"
 #include "PogoController.hpp"
-#include "RandomHeightMapGenerator.hpp"
 
 namespace raisim {
 
@@ -175,7 +174,6 @@ namespace raisim {
 
         void setSeed(int seed) {
             gen_.seed(seed);
-            terrainGenerator_.setSeed(seed);
         }
 
         void curriculumUpdate() {
@@ -222,9 +220,8 @@ namespace raisim {
         Eigen::VectorXd obScaled_, valueObScaled_;
         Eigen::Vector3d command_;
         bool visualizable_ = false;
-        RandomHeightMapGenerator terrainGenerator_;
         RaiboController controller_;
-        double maxSpeed_ = 3.0;
+        double maxSpeed_ = 1.0;
 
         std::unique_ptr<raisim::RaisimServer> server_;
         raisim::Visuals *commandArrow_, *gvArrow_;

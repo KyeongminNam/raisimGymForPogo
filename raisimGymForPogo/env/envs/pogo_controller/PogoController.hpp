@@ -185,6 +185,9 @@ namespace raisim {
                     }
 
             }
+            if(baseRot2_[8] < 0.5){
+                return true;
+            }
 
             terminalReward = float(0.0);
             return false;
@@ -292,7 +295,7 @@ namespace raisim {
 
 
             //zvelReward
-            zvelReward_ += zvelRewardCoeff_ * std::clamp(gv_[2], 0.0, 2.0);
+            zvelReward_ += zvelRewardCoeff_ * std::clamp(gv_[2], 0.0, 2.5);
 
 
 //            if (standingMode_) {
