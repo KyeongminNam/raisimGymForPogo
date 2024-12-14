@@ -48,7 +48,7 @@ weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
 weight_dir = weight_path.rsplit('/', 1)[0] + '/'
 command = np.zeros(3, dtype=np.float32)
-deadzone = 0.1
+deadzone = 0.5
 
 
 info = np.zeros(30, dtype=np.float32)
@@ -91,10 +91,16 @@ else:
             frame_start = time.time()
             for event in pygame.event.get():  # User did something.
                 if event.type == pygame.JOYBUTTONDOWN:  # If user clicked close.
-                    if event.button == 1:
+                    if event.button == 0:
+                        env.terrain_callback()
                         env.reset()
                         infoBag = []
-                        print("env reset")
+                        print("reset and terrain change")
+                    elif event.button == 1:
+                        env.reset()
+                        infoBag = []
+                        time.sleep(1.0)
+                        print("reset")
                     elif event.button == 4:
                         print("Exiting loop")
                         running = False
@@ -110,8 +116,9 @@ else:
 
                 command[0] = -maxCommand * axis_y if abs(axis_y) > deadzone else 0
                 command[1] = -maxCommand * axis_x if abs(axis_x) > deadzone else 0
-                command[2] = -2 * axis_z if abs(axis_z) > deadzone else 0
+                command[2] = -1 * axis_z if abs(axis_z) > deadzone else 0
             print(command)
+
             env.set_command(command)
             env.visualizeArrow()
             obs = env.observe(False)

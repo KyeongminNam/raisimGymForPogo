@@ -15,6 +15,7 @@
 #include "../../Yaml.hpp"
 #include "../../BasicEigenTypes.hpp"
 #include "PogoController.hpp"
+#include "RandomHeightMapGenerator.hpp"
 
 namespace raisim {
 
@@ -62,10 +63,14 @@ namespace raisim {
             // Reward coefficients
             controller_.setRewardConfig(cfg);
 
+//            heightMap_ = terrainGenerator_.generateTerrain(&world_, RandomHeightMapGenerator::GroundType(groundType_), 1.0, gen_, uniDist_);
+
             if(visualizable_){
                 server_ = std::make_unique<raisim::RaisimServer>(&world_);
-//                commandArrow_ = server_->addVisualArrow("command arrow", 0.2, 3.0, 1.0);
-//                gvArrow_ = server_->addVisualArrow("gv arrow", 0.2, 3.0, 0.0, 1.0);
+//                commandArrow_ = server_->addVisualArrow("command arrow", 0.5, 1.5, 1.0, 0.0, 0.0, 1.0);
+                commandYawArrow_ = server_->addVisualArrow("command yaw arrow", 1.5, 0.01, 1.0, 0.0, 0.0, 1.0);
+//                gvArrow_ = server_->addVisualArrow("gv arrow", 0.5, 0.01, 0.0, 0.0, 1.0, 1.0);
+                gvYawArrow_ = server_->addVisualArrow("gv yaw arrow", 0.5, 0.01, 0.0, 0.0, 1.0, 1.0);
                 server_->launchServer();
 
             }
@@ -95,24 +100,24 @@ namespace raisim {
             gc_init_.head(7) << gc_init_head_;
             gc_init_.tail(nJoints_).setConstant(0.0);
 
-            /// randomize orientation
-            raisim::Mat<3,3> rotMat, yawRot, pitchRollMat;
-            raisim::Vec<4> quaternion;
-            raisim::Vec<3> axis = {normDist_(gen_), normDist_(gen_), normDist_(gen_)};
-            axis /= axis.norm();
-            raisim::angleAxisToRotMat(axis, normDist_(gen_) * 0.02, pitchRollMat);
-            raisim::angleAxisToRotMat({0,0,1}, uniDist_(gen_) * 2. * M_PI, yawRot);
-            rotMat = pitchRollMat * yawRot;
-            raisim::rotMatToQuat(rotMat, quaternion);
-            gc_init_.segment(3, 4) = quaternion.e();
-
-            /// randomize gc & gv
-            for(int i=0 ; i<nJoints_; i++)
-                gc_init_[i+7] = 0.2 * std::clamp(normDist_(gen_), -1.0, 1.0);
-
-            Eigen::VectorXd jointVel(nJoints_);
-            for(int i=0; i<nJoints_; i++) jointVel[i] = 0.5 * std::clamp(normDist_(gen_), -1.0, 1.0);
-            gv_init_.tail(nJoints_) << jointVel;
+//            /// randomize orientation
+//            raisim::Mat<3,3> rotMat, yawRot, pitchRollMat;
+//            raisim::Vec<4> quaternion;
+//            raisim::Vec<3> axis = {normDist_(gen_), normDist_(gen_), normDist_(gen_)};
+//            axis /= axis.norm();
+//            raisim::angleAxisToRotMat(axis, normDist_(gen_) * 0.02, pitchRollMat);
+//            raisim::angleAxisToRotMat({0,0,1}, uniDist_(gen_) * 2. * M_PI, yawRot);
+//            rotMat = pitchRollMat * yawRot;
+//            raisim::rotMatToQuat(rotMat, quaternion);
+//            gc_init_.segment(3, 4) = quaternion.e();
+//
+//            /// randomize gc & gv
+//            for(int i=0 ; i<nJoints_; i++)
+//                gc_init_[i+7] = 0.2 * std::clamp(normDist_(gen_), -1.0, 1.0);
+//
+//            Eigen::VectorXd jointVel(nJoints_);
+//            for(int i=0; i<nJoints_; i++) jointVel[i] = 0.5 * std::clamp(normDist_(gen_), -1.0, 1.0);
+//            gv_init_.tail(nJoints_) << jointVel;
 
 
             /// command sampling
@@ -192,6 +197,7 @@ namespace raisim {
 
         void setSeed(int seed) {
             gen_.seed(seed);
+            terrainGenerator_.setSeed(seed);
         }
 
         void curriculumUpdate() {
@@ -199,10 +205,16 @@ namespace raisim {
             cmdcurriculumFactor_ = std::min(cmdcurriculumFactor_, 1.0);
         }
 
+        void terrainChange() {
+//            groundType_ = (groundType_+1) % nMaps_; /// rotate ground type for a visualization purpose
+//            world_.removeObject(heightMap_);
+//            heightMap_ = terrainGenerator_.generateTerrain(&world_, RandomHeightMapGenerator::GroundType(groundType_), 1.0, gen_, uniDist_);
+        }
+
         static constexpr int getObDim() { return RaiboController::getObDim(); }
         static constexpr int getValueObDim() { return RaiboController::getValueObDim(); }
         static constexpr int getActionDim() { return RaiboController::getActionDim(); }
-        int getGroundNum() { return 1; }
+        int getGroundNum() { return nMaps_; }
 
         void getState(Eigen::Ref<EigenVec> gc, Eigen::Ref<EigenVec> gv) {
             controller_.getState(gc, gv);
@@ -213,11 +225,21 @@ namespace raisim {
         }
 
         void visualizeArrow(){
+//            server_->getVisualObject("command arrow")->setCylinderSize(0.5, command_.head(2).norm());
 //            commandArrow_->setPosition(controller_.getArrowPosition());
 //            commandArrow_->setOrientation(controller_.getCommandArrowOrientation(command_));
-//
+
+            server_->getVisualObject("command yaw arrow")->setCylinderSize(0.5, std::abs(command_[2]));
+            commandYawArrow_->setPosition(controller_.getArrowPosition());
+            commandYawArrow_->setOrientation(controller_.getgvYawArrowOrientation(command_[2]));
+
+//            server_->getVisualObject("gv arrow")->setCylinderSize(0.5, controller_.getgvArrowSize());
 //            gvArrow_->setPosition(controller_.getArrowPosition());
 //            gvArrow_->setOrientation(controller_.getgvArrowOrientation());
+
+            server_->getVisualObject("gv yaw arrow")->setCylinderSize(0.5, controller_.getgvYawArrowSize());
+            gvYawArrow_->setPosition(controller_.getArrowPosition());
+            gvYawArrow_->setOrientation(controller_.getgvYawArrowOrientation(100.0));
         }
 
     protected:
@@ -229,7 +251,6 @@ namespace raisim {
         const std::string resourceDir_;
 
         raisim::ArticulatedSystem* pogo_;
-        raisim::HeightMap* heightMap_;
         Eigen::VectorXd gc_init_, gv_init_, gc_init_head_;
         Eigen::VectorXd gc_init_from_, gv_init_from_;
 
@@ -241,7 +262,12 @@ namespace raisim {
         double maxSpeed_ = 1.5;
 
         std::unique_ptr<raisim::RaisimServer> server_;
-        raisim::Visuals *commandArrow_, *gvArrow_;
+        raisim::Visuals *commandArrow_, *commandYawArrow_, *gvArrow_, *gvYawArrow_;
+
+        raisim::HeightMap* heightMap_;
+        RandomHeightMapGenerator terrainGenerator_;
+        int groundType_ = 0;
+        int nMaps_ = 7;
 
         thread_local static std::mt19937 gen_;
         thread_local static std::normal_distribution<double> normDist_;

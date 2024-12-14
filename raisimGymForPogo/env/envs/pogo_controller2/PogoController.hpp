@@ -331,34 +331,103 @@ namespace raisim {
         }
 
         Eigen::Vector3d getArrowPosition(){
-            return gc_.head(3);
+//            return gc_.head(3);
+            return Eigen::Vector3d(gc_[0], gc_[1], 3.2);
         }
 
-        Eigen::Vector4d getCommandArrowOrientation(Eigen::Vector3d &command){
-            double a = command[0];
-            double b = command[1];
-            double theta = std::atan2(b, a);
 
-            Eigen::Vector4d quat;
-            quat[0] = std::cos(theta / 2);
-            quat[1] = 0.0;
-            quat[2] = 0.0;
-            quat[3] = std::sin(theta / 2);
-            return quat;
+        Eigen::Vector4d getCommandArrowOrientation(const Eigen::Vector3d &command) {
+            Eigen::Vector3d v(command[0], command[1], 0);
+            v.normalize();
+
+            Eigen::Vector3d u(0, 0, 1);
+            Eigen::Vector3d axis = u.cross(v);
+
+            if (axis.norm() < 1e-6) {
+                return Eigen::Vector4d(1, 0, 0, 0);  // No rotation
+            }
+            axis.normalize();
+
+            // Calculate the angle between the vectors
+            double cos_theta = u.dot(v);
+            cos_theta = std::clamp(cos_theta, -1.0, 1.0);
+            double theta = std::acos(cos_theta);
+
+            // Quaternion components for the rotation
+            double w = std::cos(theta / 2);
+            double x = axis[0] * std::sin(theta / 2);
+            double y = axis[1] * std::sin(theta / 2);
+            double z = axis[2] * std::sin(theta / 2);
+            Eigen::Quaterniond quatBase(w, x, y, z);
+
+            // Step 1: Extract the yaw from the base rotation matrix baseRot_2
+            double yaw = std::atan2(baseRot2_(1, 0), baseRot2_(0, 0));  // Yaw angle
+
+            // Step 2: Create a quaternion for the yaw rotation
+            Eigen::Quaterniond quatYaw(Eigen::AngleAxisd(yaw, Eigen::Vector3d(0, 0, 1)));
+
+            // Step 3: Apply the yaw rotation to the base quaternion
+            Eigen::Quaterniond quatWorld = quatYaw * quatBase;
+
+            // Return the resulting quaternion in world frame
+            return Eigen::Vector4d(quatWorld.w(), quatWorld.x(), quatWorld.y(), quatWorld.z());
         }
+
+
 
         Eigen::Vector4d getgvArrowOrientation(){
-            double a = bodyLinVel_[0];
-            double b = bodyLinVel_[1];
-            double theta = std::atan2(b, a);
+            Eigen::Vector3d v(bodyLinVel2_[0], bodyLinVel2_[1], 0);
+            v.normalize();
 
-            Eigen::Vector4d quat;
-            quat[0] = std::cos(theta / 2);
-            quat[1] = 0.0;
-            quat[2] = 0.0;
-            quat[3] = std::sin(theta / 2);
-            return quat;
+            Eigen::Vector3d u(0, 0, 1);
+            Eigen::Vector3d axis = u.cross(v);
+
+            if (axis.norm() < 1e-6) {
+                return Eigen::Vector4d(1, 0, 0, 0);  // No rotation
+            }
+            axis.normalize();
+
+            // Calculate the angle between the vectors
+            double cos_theta = u.dot(v);
+            cos_theta = std::clamp(cos_theta, -1.0, 1.0);
+            double theta = std::acos(cos_theta);
+
+            // Quaternion components for the rotation
+            double w = std::cos(theta / 2);
+            double x = axis[0] * std::sin(theta / 2);
+            double y = axis[1] * std::sin(theta / 2);
+            double z = axis[2] * std::sin(theta / 2);
+            Eigen::Quaterniond quatBase(w, x, y, z);
+
+            // Step 1: Extract the yaw from the base rotation matrix baseRot_2
+            double yaw = std::atan2(baseRot2_(1, 0), baseRot2_(0, 0));  // Yaw angle
+
+            // Step 2: Create a quaternion for the yaw rotation
+            Eigen::Quaterniond quatYaw(Eigen::AngleAxisd(yaw, Eigen::Vector3d(0, 0, 1)));
+
+            // Step 3: Apply the yaw rotation to the base quaternion
+            Eigen::Quaterniond quatWorld = quatYaw * quatBase;
+
+            // Return the resulting quaternion in world frame
+            return Eigen::Vector4d(quatWorld.w(), quatWorld.x(), quatWorld.y(), quatWorld.z());
         }
+
+        double getgvArrowSize(){
+            return bodyLinVel_.head(2).norm();
+        }
+        double getgvYawArrowSize(){
+            return std::abs(bodyAngVel2_[2]);
+        }
+
+        Eigen::Vector4d getgvYawArrowOrientation(double input){
+            if (input == 100.0)
+                input = bodyAngVel2_[2];
+            if(input > 0.0)
+                return Eigen::Vector4d(1, 0, 0, 0);
+            else
+                return Eigen::Vector4d(0, 1, 0, 0);
+        }
+
 
 
         inline void setStandingMode(bool mode) { standingMode_ = mode; }

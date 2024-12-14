@@ -38,6 +38,7 @@ PYBIND11_MODULE(RAISIMGYM_TORCH_ENV_NAME, m) {
     .def("stopRecordingVideo", &VectorizedEnvironment<ENVIRONMENT>::stopRecordingVideo)
     .def("startRecordingVideo", &VectorizedEnvironment<ENVIRONMENT>::startRecordingVideo)
     .def("curriculumUpdate", &VectorizedEnvironment<ENVIRONMENT>::curriculumUpdate)
+    .def("terrainChange", &VectorizedEnvironment<ENVIRONMENT>::terrainChange)
     .def("getStepDataTag", &VectorizedEnvironment<ENVIRONMENT>::getStepDataTag)
     .def("getStepData", &VectorizedEnvironment<ENVIRONMENT>::getStepData)
     .def("setCommand", &VectorizedEnvironment<ENVIRONMENT>::setCommand)

@@ -114,6 +114,9 @@ class RaisimGymVecEnv:
     def curriculum_callback(self):
         self.wrapper.curriculumUpdate()
 
+    def terrain_callback(self):
+        self.wrapper.terrainChange()
+
     def get_step_data_tag(self):
         return self.wrapper.getStepDataTag()
 

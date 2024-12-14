@@ -187,6 +187,9 @@ namespace raisim {
         static constexpr int getActionDim() { return RaiboController::getActionDim(); }
         int getGroundNum() { return 1; }
 
+        void terrainChange() {
+        }
+
         void getState(Eigen::Ref<EigenVec> gc, Eigen::Ref<EigenVec> gv) {
             controller_.getState(gc, gv);
         }

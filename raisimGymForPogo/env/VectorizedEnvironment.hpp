@@ -217,6 +217,10 @@ class VectorizedEnvironment {
     for (auto *env: environments_)
       env->curriculumUpdate();
   };
+    void terrainChange() {
+        for (auto *env: environments_)
+            env->terrainChange();
+    };
 
  private:
 

@@ -92,10 +92,15 @@ else:
             frame_start = time.time()
             for event in pygame.event.get():  # User did something.
                 if event.type == pygame.JOYBUTTONDOWN:  # If user clicked close.
-                    if event.button == 1:
+                    if event.button == 0:
+                        env.terrain_callback()
                         env.reset()
                         infoBag = []
-                        print("env reset")
+                        print("reset and terrain change")
+                    elif event.button == 1:
+                        env.reset()
+                        infoBag = []
+                        print("reset")
                     elif event.button == 4:
                         print("Exiting loop")
                         running = False
