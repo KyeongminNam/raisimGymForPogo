@@ -67,10 +67,10 @@ namespace raisim {
 
             if(visualizable_){
                 server_ = std::make_unique<raisim::RaisimServer>(&world_);
-//                commandArrow_ = server_->addVisualArrow("command arrow", 0.5, 1.5, 1.0, 0.0, 0.0, 1.0);
-                commandYawArrow_ = server_->addVisualArrow("command yaw arrow", 1.5, 0.01, 1.0, 0.0, 0.0, 1.0);
-//                gvArrow_ = server_->addVisualArrow("gv arrow", 0.5, 0.01, 0.0, 0.0, 1.0, 1.0);
-                gvYawArrow_ = server_->addVisualArrow("gv yaw arrow", 0.5, 0.01, 0.0, 0.0, 1.0, 1.0);
+                commandArrow_ = server_->addVisualArrow("command arrow", 0.5, 1.5, 1.0, 0.0, 0.0, 1.0);
+//                commandYawArrow_ = server_->addVisualArrow("command yaw arrow", 1.5, 1.0, 1.0, 0.0, 0.0, 1.0);
+                gvArrow_ = server_->addVisualArrow("gv arrow", 0.5, 0.01, 0.0, 0.0, 1.0, 1.0);
+//                gvYawArrow_ = server_->addVisualArrow("gv yaw arrow", 0.5, 1.0, 0.0, 0.0, 1.0, 1.0);
                 server_->launchServer();
 
             }
@@ -225,21 +225,21 @@ namespace raisim {
         }
 
         void visualizeArrow(){
-//            server_->getVisualObject("command arrow")->setCylinderSize(0.5, command_.head(2).norm());
-//            commandArrow_->setPosition(controller_.getArrowPosition());
-//            commandArrow_->setOrientation(controller_.getCommandArrowOrientation(command_));
+            server_->getVisualObject("command arrow")->setCylinderSize(0.5, command_.head(2).norm());
+            commandArrow_->setPosition(controller_.getArrowPosition());
+            commandArrow_->setOrientation(controller_.getCommandArrowOrientation(command_));
 
-            server_->getVisualObject("command yaw arrow")->setCylinderSize(0.5, std::abs(command_[2]));
-            commandYawArrow_->setPosition(controller_.getArrowPosition());
-            commandYawArrow_->setOrientation(controller_.getgvYawArrowOrientation(command_[2]));
+//            server_->getVisualObject("command yaw arrow")->setCylinderSize(0.5, std::abs(command_[2]));
+//            commandYawArrow_->setPosition(controller_.getArrowPosition());
+//            commandYawArrow_->setOrientation(controller_.getgvYawArrowOrientation(command_[2]));
 
-//            server_->getVisualObject("gv arrow")->setCylinderSize(0.5, controller_.getgvArrowSize());
-//            gvArrow_->setPosition(controller_.getArrowPosition());
-//            gvArrow_->setOrientation(controller_.getgvArrowOrientation());
+            server_->getVisualObject("gv arrow")->setCylinderSize(0.5, controller_.getgvArrowSize());
+            gvArrow_->setPosition(controller_.getArrowPosition());
+            gvArrow_->setOrientation(controller_.getgvArrowOrientation());
 
-            server_->getVisualObject("gv yaw arrow")->setCylinderSize(0.5, controller_.getgvYawArrowSize());
-            gvYawArrow_->setPosition(controller_.getArrowPosition());
-            gvYawArrow_->setOrientation(controller_.getgvYawArrowOrientation(100.0));
+//            server_->getVisualObject("gv yaw arrow")->setCylinderSize(0.5, controller_.getgvYawArrowSize());
+//            gvYawArrow_->setPosition(controller_.getArrowPosition());
+//            gvYawArrow_->setOrientation(controller_.getgvYawArrowOrientation(100.0));
         }
 
     protected:

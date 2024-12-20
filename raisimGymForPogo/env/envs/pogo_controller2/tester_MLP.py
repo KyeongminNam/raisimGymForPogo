@@ -1,6 +1,6 @@
 import numpy as np
 from ruamel.yaml import YAML, dump, RoundTripDumper
-from raisimGymForPogo.env.bin.pogo_controller import RaisimGymForPogo
+from raisimGymForPogo.env.bin.pogo_controller2 import RaisimGymForPogo
 from raisimGymForPogo.env.RaisimGymVecEnv import RaisimGymVecEnv as VecEnv
 import raisimGymForPogo.algo.ppo2.module as ppo_module
 import os
@@ -42,7 +42,7 @@ ob_dim = env.num_obs
 act_dim = env.num_acts
 nMaps = env.num_ground
 ground = 0
-maxCommand = 1
+maxCommand = 1.5
 
 weight_path = args.weight
 iteration_number = weight_path.rsplit('/', 1)[1].split('_', 1)[1].rsplit('.', 1)[0]
@@ -107,10 +107,13 @@ else:
 
                 command[0] = -maxCommand * axis_y if abs(axis_y) > deadzone else 0
                 command[1] = -maxCommand * axis_x if abs(axis_x) > deadzone else 0
-                command[2] = -2 * axis_z if abs(axis_z) > deadzone else 0
+                command[2] = -0.1 * axis_z if abs(axis_z) > deadzone else 0
+                command[0] = 1.5
+
 
             print(command)
             env.set_command(command)
+            env.visualizeArrow()
             obs = env.observe(False)
             with torch.no_grad():
                 action_ll = loaded_graph.architecture(torch.from_numpy(obs).cpu())

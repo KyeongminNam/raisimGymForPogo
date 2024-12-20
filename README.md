@@ -28,6 +28,10 @@ Check out our presentation here: [[Youtube_Link](https://www.youtube.com/watch?v
 2. Run tester.py of the task with policy: 
    * ```cd raisimGymForPogo/env/envs/pogo_controller2```
    * ```python tester.py --weight <POLICY_DIRECTORY>/full_XXX.pt```
+3. Download our policy at: 
+   - [[our_policy](https://github.com/KyeongminNam/raisimGymForPogo/blob/main/raisimGymForPogo/policies/original/full_22000.pt)]
+   - [[ablation 1](https://github.com/KyeongminNam/raisimGymForPogo/blob/main/raisimGymForPogo/policies/no_priv/full_22000.pt)]
+   - [[ablation 2](https://github.com/KyeongminNam/raisimGymForPogo/blob/main/raisimGymForPogo/policies/MLP/full_22000.pt)]
 
 ### Debugging
 1. Compile raisimgym with debug symbols: ```python setup develop --Debug```. This compiles <YOUR_APP_NAME>_debug_app
